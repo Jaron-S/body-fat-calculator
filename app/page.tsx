@@ -19,7 +19,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { ChevronDown, ChevronRight, Info } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useState } from "react"; // Import useCallback
 
 interface MeasurementInputs {
 	height: [string, string, string];
@@ -51,6 +51,60 @@ interface Results {
 		suprailiac: number | null;
 	};
 }
+
+// --- FIX START: Moved MeasurementGroup outside the main component ---
+const MeasurementGroup = ({
+	label,
+	field,
+	unit = "in",
+	show = true,
+	values,
+	average,
+	updateMeasurement,
+}: {
+	label: string;
+	field: keyof Omit<MeasurementInputs, "age">;
+	unit?: string;
+	show?: boolean;
+	values: [string, string, string];
+	average: number | null;
+	updateMeasurement: (
+		field: keyof MeasurementInputs,
+		index: number,
+		value: string
+	) => void;
+}) => {
+	if (!show) return null;
+
+	return (
+		<div className="space-y-2">
+			<Label className="text-sm font-medium">
+				{label} ({unit})
+			</Label>
+			<div className="grid grid-cols-3 gap-2">
+				{[0, 1, 2].map((index) => (
+					// A more stable key is also a good practice
+					<div key={`${field}-${index}`}>
+						<Input
+							type="number"
+							step="0.1"
+							placeholder={`${label} ${index + 1}`}
+							value={values[index]}
+							onChange={(e) => updateMeasurement(field, index, e.target.value)}
+							className="text-sm"
+						/>
+					</div>
+				))}
+			</div>
+			{average !== null && (
+				<p className="text-xs text-muted-foreground">
+					Average: {average.toFixed(1)} {unit}
+				</p>
+			)}
+		</div>
+	);
+};
+// --- FIX END ---
 
 export default function BodyFatCalculator() {
 	const [gender, setGender] = useState<"male" | "female">("male");
@@ -97,6 +151,26 @@ export default function BodyFatCalculator() {
 		if (nums.length === 0) return null;
 		return nums.reduce((sum, n) => sum + n, 0) / nums.length;
 	};
+
+	// --- FIX START: Wrapped updateMeasurement in useCallback ---
+	const updateMeasurement = useCallback(
+		(field: keyof MeasurementInputs, index: number, value: string) => {
+			if (field === "age") {
+				setMeasurements((prev) => ({ ...prev, age: value }));
+			} else {
+				setMeasurements((prev) => ({
+					...prev,
+					[field]: prev[field].map((v, i) => (i === index ? value : v)) as [
+						string,
+						string,
+						string
+					],
+				}));
+			}
+		},
+		[]
+	);
+	// --- FIX END ---
 
 	const calculateBodyFat = () => {
 		const newErrors: string[] = [];
@@ -248,68 +322,6 @@ export default function BodyFatCalculator() {
 			averages: newAverages,
 		});
 		setErrors(newErrors);
-	};
-
-	const updateMeasurement = (
-		field: keyof MeasurementInputs,
-		index: number,
-		value: string
-	) => {
-		if (field === "age") {
-			setMeasurements((prev) => ({ ...prev, age: value }));
-		} else {
-			setMeasurements((prev) => ({
-				...prev,
-				[field]: prev[field].map((v, i) => (i === index ? value : v)) as [
-					string,
-					string,
-					string
-				],
-			}));
-		}
-	};
-
-	const MeasurementGroup = ({
-		label,
-		field,
-		unit = "in",
-		show = true,
-	}: {
-		label: string;
-		field: keyof Omit<MeasurementInputs, "age">;
-		unit?: string;
-		show?: boolean;
-	}) => {
-		if (!show) return null;
-
-		return (
-			<div className="space-y-2">
-				<Label className="text-sm font-medium">
-					{label} ({unit})
-				</Label>
-				<div className="grid grid-cols-3 gap-2">
-					{[0, 1, 2].map((index) => (
-						<div key={index}>
-							<Input
-								type="number"
-								step="0.1"
-								placeholder={`${label} ${index + 1}`}
-								value={measurements[field][index]}
-								onChange={(e) =>
-									updateMeasurement(field, index, e.target.value)
-								}
-								className="text-sm"
-							/>
-						</div>
-					))}
-				</div>
-				{results.averages[field] && (
-					<p className="text-xs text-muted-foreground">
-						Average: {results.averages[field]?.toFixed(1)} {unit}
-					</p>
-				)}
-			</div>
-		);
 	};
 
 	return (
@@ -559,14 +571,37 @@ export default function BodyFatCalculator() {
 							</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-4">
-							<MeasurementGroup label="Height" field="height" />
-							<MeasurementGroup label="Neck" field="neck" />
-							<MeasurementGroup label="Waist" field="waist" />
+							{/* --- FIX START: Pass props to MeasurementGroup --- */}
+							<MeasurementGroup
+								label="Height"
+								field="height"
+								values={measurements.height}
+								average={results.averages.height}
+								updateMeasurement={updateMeasurement}
+							/>
+							<MeasurementGroup
+								label="Neck"
+								field="neck"
+								values={measurements.neck}
+								average={results.averages.neck}
+								updateMeasurement={updateMeasurement}
+							/>
+							<MeasurementGroup
+								label="Waist"
+								field="waist"
+								values={measurements.waist}
+								average={results.averages.waist}
+								updateMeasurement={updateMeasurement}
+							/>
 							<MeasurementGroup
 								label="Hip"
 								field="hip"
 								show={gender === "female"}
+								values={measurements.hip}
+								average={results.averages.hip}
+								updateMeasurement={updateMeasurement}
 							/>
+							{/* --- FIX END --- */}
 						</CardContent>
 					</Card>
 
@@ -574,40 +609,68 @@ export default function BodyFatCalculator() {
 						<CardHeader>
 							<CardTitle>Skinfold Measurements</CardTitle>
 							<CardDescription>
-								Required for Jackson & Pollock method (
-								{gender === "male"
-									? "Pectoral, Abdominal, Thigh"
-									: "Triceps, Suprailiac, Thigh"}
-								)
+								Enter three measurements for each site (will be averaged)
 							</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-4">
+							{/* --- FIX START: Pass props to MeasurementGroup --- */}
 							{gender === "male" && (
 								<>
 									<MeasurementGroup
 										label="Pectoral"
 										field="pectoral"
 										unit="mm"
+										values={measurements.pectoral}
+										average={results.averages.pectoral}
+										updateMeasurement={updateMeasurement}
 									/>
 									<MeasurementGroup
 										label="Abdominal"
 										field="abdominal"
 										unit="mm"
+										values={measurements.abdominal}
+										average={results.averages.abdominal}
+										updateMeasurement={updateMeasurement}
 									/>
-									<MeasurementGroup label="Thigh" field="thigh" unit="mm" />
+									<MeasurementGroup
+										label="Thigh"
+										field="thigh"
+										unit="mm"
+										values={measurements.thigh}
+										average={results.averages.thigh}
+										updateMeasurement={updateMeasurement}
+									/>
 								</>
 							)}
 							{gender === "female" && (
 								<>
-									<MeasurementGroup label="Triceps" field="triceps" unit="mm" />
+									<MeasurementGroup
+										label="Triceps"
+										field="triceps"
+										unit="mm"
+										values={measurements.triceps}
+										average={results.averages.triceps}
+										updateMeasurement={updateMeasurement}
+									/>
 									<MeasurementGroup
 										label="Suprailiac"
 										field="suprailiac"
 										unit="mm"
+										values={measurements.suprailiac}
+										average={results.averages.suprailiac}
+										updateMeasurement={updateMeasurement}
 									/>
-									<MeasurementGroup label="Thigh" field="thigh" unit="mm" />
+									<MeasurementGroup
+										label="Thigh"
+										field="thigh"
+										unit="mm"
+										values={measurements.thigh}
+										average={results.averages.thigh}
+										updateMeasurement={updateMeasurement}
+									/>
 								</>
 							)}
+							{/* --- FIX END --- */}
 							<div className="space-y-2">
 								<Label className="text-sm font-medium">Age (years)</Label>
 								<Input
