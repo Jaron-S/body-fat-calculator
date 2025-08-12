@@ -4,9 +4,8 @@ import { GeistMono } from 'geist/font/mono'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
-  generator: 'v0.app',
+  title: 'Body Fat Calculator',
+  description: 'A body fat calculator that estimates your body fat using 3 different methods.',
 }
 
 export default function RootLayout({
