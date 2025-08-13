@@ -42,3 +42,8 @@ export interface BFPResults {
 	ffmi: number | null;
 	adjustedFfmi: number | null;
 }
+
+export type PartialBFPResults = Pick<
+	BFPResults,
+	"military" | "navy" | "jacksonPollock"
+>;
