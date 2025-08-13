@@ -29,45 +29,87 @@ import {
 	calculateNavyBFP,
 } from "@/utils/bodyFatCalculations";
 import { Label } from "@radix-ui/react-label";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
+const initialMeasurements: MeasurementInputs = {
+	height: ["", "", ""],
+	neck: ["", "", ""],
+	waist: ["", "", ""],
+	hip: ["", "", ""],
+	pectoral: ["", "", ""],
+	abdominal: ["", "", ""],
+	thigh: ["", "", ""],
+	triceps: ["", "", ""],
+	suprailiac: ["", "", ""],
+	age: "",
+	weight: "",
+};
+
+const initialResults: BFPResults = {
+	military: null,
+	navy: null,
+	jacksonPollock: null,
+	adjusted: null,
+	ffmi: null,
+	adjustedFfmi: null,
+};
+
+const initialAverages: MeasurementAverages = {
+	height: null,
+	neck: null,
+	waist: null,
+	hip: null,
+	pectoral: null,
+	abdominal: null,
+	thigh: null,
+	triceps: null,
+	suprailiac: null,
+	age: null,
+	weight: null,
+};
+
+const LOCAL_STORAGE_KEY = "bodyCompCalculatorData";
 
 export default function BodyFatCalculator() {
 	const [gender, setGender] = useState<Gender>("male");
-	const [measurements, setMeasurements] = useState<MeasurementInputs>({
-		height: ["", "", ""],
-		neck: ["", "", ""],
-		waist: ["", "", ""],
-		hip: ["", "", ""],
-		pectoral: ["", "", ""],
-		abdominal: ["", "", ""],
-		thigh: ["", "", ""],
-		triceps: ["", "", ""],
-		suprailiac: ["", "", ""],
-		age: "",
-		weight: "",
-	});
-	const [results, setResults] = useState<BFPResults>({
-		military: null,
-		navy: null,
-		jacksonPollock: null,
-		adjusted: null,
-		ffmi: null,
-		adjustedFfmi: null,
-	});
-	const [averages, setAverages] = useState<MeasurementAverages>({
-		height: null,
-		neck: null,
-		waist: null,
-		hip: null,
-		pectoral: null,
-		abdominal: null,
-		thigh: null,
-		triceps: null,
-		suprailiac: null,
-		age: null,
-		weight: null,
-	});
+	const [measurements, setMeasurements] =
+		useState<MeasurementInputs>(initialMeasurements);
+	const [results, setResults] = useState<BFPResults>(initialResults);
+	const [averages, setAverages] =
+		useState<MeasurementAverages>(initialAverages);
 	const [errors, setErrors] = useState<string[]>([]);
+
+	// Load state from local storage on initial render
+	useEffect(() => {
+		try {
+			const savedData = localStorage.getItem(LOCAL_STORAGE_KEY);
+			if (savedData) {
+				const parsedData = JSON.parse(savedData);
+				// Validate parsed data before setting state to prevent errors
+				if (parsedData.measurements) setMeasurements(parsedData.measurements);
+				if (parsedData.results) setResults(parsedData.results);
+				if (parsedData.averages) setAverages(parsedData.averages);
+				if (parsedData.gender) setGender(parsedData.gender);
+			}
+		} catch (error) {
+			console.error("Failed to load data from local storage:", error);
+		}
+	}, []);
+
+	// Save state to local storage whenever it changes
+	useEffect(() => {
+		try {
+			const dataToSave = {
+				gender,
+				measurements,
+				results,
+				averages,
+			};
+			localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(dataToSave));
+		} catch (error) {
+			console.error("Failed to save data to local storage:", error);
+		}
+	}, [gender, measurements, results, averages]);
 
 	const updateMeasurement = useCallback(
 		(field: keyof MeasurementInputs, index: number, value: string) => {
@@ -153,6 +195,19 @@ export default function BodyFatCalculator() {
 
 		setResults(bfpResults);
 		setErrors(newErrors);
+	};
+
+	const handleReset = () => {
+		try {
+			localStorage.removeItem(LOCAL_STORAGE_KEY);
+		} catch (error) {
+			console.error("Failed to clear local storage:", error);
+		}
+		setGender("male");
+		setMeasurements(initialMeasurements);
+		setResults(initialResults);
+		setAverages(initialAverages);
+		setErrors([]);
 	};
 
 	// Memoize input groups to prevent re-rendering when other state changes
@@ -340,13 +395,22 @@ export default function BodyFatCalculator() {
 					{SkinfoldInputs}
 				</div>
 
-				<div className="flex justify-center">
+				<div className="flex flex-col sm:flex-row justify-center items-center gap-4">
 					<Button
 						onClick={handleCalculate}
 						size="lg"
-						className="px-8 w-full md:w-auto"
+						className="px-8 w-full sm:w-auto"
 					>
 						Calculate Body Composition
+					</Button>
+					<Button
+						onClick={handleReset}
+						variant="outline"
+						size="lg"
+						className="w-full sm:w-auto"
+					>
+						<RotateCcw className="mr-2 h-4 w-4" />
+						Reset Form
 					</Button>
 				</div>
 
