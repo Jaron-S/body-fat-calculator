@@ -29,6 +29,7 @@ import {
 	calculateNavyBFP,
 } from "@/utils/bodyFatCalculations";
 import { Label } from "@radix-ui/react-label";
+import { RotateCcw } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 const initialMeasurements: MeasurementInputs = {
