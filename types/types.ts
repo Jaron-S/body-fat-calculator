@@ -35,7 +35,7 @@ export interface MeasurementAverages {
 
 // Defines the structure for the final body fat percentage results.
 export interface BFPResults {
-	military: number | null;
+	rfm: number | null;
 	navy: number | null;
 	jacksonPollock: number | null;
 	adjusted: number | null;
@@ -45,5 +45,5 @@ export interface BFPResults {
 
 export type PartialBFPResults = Pick<
 	BFPResults,
-	"military" | "navy" | "jacksonPollock"
+	"rfm" | "navy" | "jacksonPollock"
 >;

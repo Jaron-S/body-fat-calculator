@@ -1,5 +1,4 @@
 import {
-	BFPResults,
 	Gender,
 	MeasurementAverages,
 	MeasurementTuple,
@@ -18,33 +17,28 @@ export const calculateAverage = (values: MeasurementTuple): number | null => {
 };
 
 /**
- * **FORMULA CORRECTED**
- * Calculates Body Fat Percentage using the U.S. Military (DoD) formula.
- * The original code only had the male formula. I've added the female formula.
+ * Calculates Body Fat Percentage using the Relative Fat Mass (RFM) formula.
+ * This replaces the previous U.S. Military method.
  * @param averages - The averaged measurement values.
  * @param gender - The user's gender.
  * @returns The calculated BFP, or null if inputs are missing.
  */
-export const calculateMilitaryBFP = (
+export const calculateRfmBFP = (
 	averages: MeasurementAverages,
 	gender: Gender
 ): number | null => {
-	const { height, neck, waist, hip } = averages;
-	if (!height || !neck || !waist) return null;
+	const { height, waist } = averages;
+	if (!height || !waist || height <= 0 || waist <= 0) return null;
+
+	// Convert height and waist from inches to centimeters for the formula
+	const heightCm = height * 2.54;
+	const waistCm = waist * 2.54;
 
 	if (gender === "male") {
-		if (waist <= neck) return null; // Constraint for the formula
-		return (
-			86.01 * Math.log10(waist - neck) - 70.041 * Math.log10(height) + 36.76
-		);
+		return 64 - 20 * (heightCm / waistCm);
 	} else {
 		// female
-		if (!hip || waist + hip <= neck) return null; // Constraint for the formula
-		return (
-			163.205 * Math.log10(waist + hip - neck) -
-			97.684 * Math.log10(height) -
-			78.387
-		);
+		return 76 - 20 * (heightCm / waistCm);
 	}
 };
 
@@ -138,9 +132,9 @@ export const calculateJacksonPollockBFP = (
 export const calculateAdjustedBFP = (
 	results: PartialBFPResults
 ): { adjustedBfp: number | null; outlier: string | null } => {
-	const { military, navy, jacksonPollock } = results;
+	const { rfm, navy, jacksonPollock } = results; // UPDATED
 	const namedResults = [
-		{ name: "Military", value: military },
+		{ name: "RFM", value: rfm }, // UPDATED
 		{ name: "Navy", value: navy },
 		{ name: "Jackson/Pollock", value: jacksonPollock },
 	].filter((r) => r.value !== null && r.value > 0) as {
@@ -150,13 +144,11 @@ export const calculateAdjustedBFP = (
 
 	if (namedResults.length === 0) return { adjustedBfp: null, outlier: null };
 
-	// If there are less than 3 results, outlier detection isn't possible, so we just average them.
 	if (namedResults.length < 3) {
 		const sum = namedResults.reduce((acc, res) => acc + res.value, 0);
 		return { adjustedBfp: sum / namedResults.length, outlier: null };
 	}
 
-	// With exactly 3 results, find the two that are closest together and average them.
 	const [r1, r2, r3] = namedResults;
 	const diff12 = Math.abs(r1.value - r2.value);
 	const diff13 = Math.abs(r1.value - r3.value);

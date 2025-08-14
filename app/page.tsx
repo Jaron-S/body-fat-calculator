@@ -25,8 +25,8 @@ import {
 	calculateAverage,
 	calculateFFMI,
 	calculateJacksonPollockBFP,
-	calculateMilitaryBFP,
 	calculateNavyBFP,
+	calculateRfmBFP,
 } from "@/utils/bodyFatCalculations";
 import { Label } from "@radix-ui/react-label";
 import { RotateCcw } from "lucide-react";
@@ -47,7 +47,7 @@ const initialMeasurements: MeasurementInputs = {
 };
 
 const initialResults: BFPResults = {
-	military: null,
+	rfm: null,
 	navy: null,
 	jacksonPollock: null,
 	adjusted: null,
@@ -79,7 +79,7 @@ export default function BodyFatCalculator() {
 	const [averages, setAverages] =
 		useState<MeasurementAverages>(initialAverages);
 	const [errors, setErrors] = useState<string[]>([]);
-	const [outlierMethod, setOutlierMethod] = useState<string | null>(null); // NEW: State for outlier method
+	const [outlierMethod, setOutlierMethod] = useState<string | null>(null);
 
 	// Load state from local storage on initial render
 	useEffect(() => {
@@ -87,13 +87,12 @@ export default function BodyFatCalculator() {
 			const savedData = localStorage.getItem(LOCAL_STORAGE_KEY);
 			if (savedData) {
 				const parsedData = JSON.parse(savedData);
-				// Validate parsed data before setting state to prevent errors
 				if (parsedData.measurements) setMeasurements(parsedData.measurements);
 				if (parsedData.results) setResults(parsedData.results);
 				if (parsedData.averages) setAverages(parsedData.averages);
 				if (parsedData.gender) setGender(parsedData.gender);
 				if (parsedData.outlierMethod)
-					setOutlierMethod(parsedData.outlierMethod); // Load outlier
+					setOutlierMethod(parsedData.outlierMethod);
 			}
 		} catch (error) {
 			console.error("Failed to load data from local storage:", error);
@@ -108,7 +107,7 @@ export default function BodyFatCalculator() {
 				measurements,
 				results,
 				averages,
-				outlierMethod, // Save outlier
+				outlierMethod,
 			};
 			localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(dataToSave));
 		} catch (error) {
@@ -150,10 +149,10 @@ export default function BodyFatCalculator() {
 		};
 		setAverages(calculatedAverages);
 
-		const military = calculateMilitaryBFP(calculatedAverages, gender);
-		if (military === null)
+		const rfm = calculateRfmBFP(calculatedAverages, gender); // UPDATED
+		if (rfm === null)
 			newErrors.push(
-				"Could not calculate Military BFP. Check required fields: Height, Neck, Waist (and Hip for females)."
+				"Could not calculate RFM BFP. Check required fields: Height, Waist."
 			);
 
 		const navy = calculateNavyBFP(calculatedAverages, gender);
@@ -176,12 +175,11 @@ export default function BodyFatCalculator() {
 			);
 		}
 
-		// UPDATED: Capture both the adjusted BFP and the outlier method
 		const { adjustedBfp, outlier } = calculateAdjustedBFP({
-			military,
+			rfm,
 			navy,
 			jacksonPollock,
-		});
+		}); // UPDATED
 		setOutlierMethod(outlier);
 
 		const { ffmi, adjustedFfmi } = calculateFFMI(
@@ -196,13 +194,13 @@ export default function BodyFatCalculator() {
 		}
 
 		const bfpResults: BFPResults = {
-			military,
+			rfm,
 			navy,
 			jacksonPollock,
 			adjusted: adjustedBfp,
 			ffmi,
 			adjustedFfmi,
-		};
+		}; // UPDATED
 
 		setResults(bfpResults);
 		setErrors(newErrors);
@@ -219,7 +217,7 @@ export default function BodyFatCalculator() {
 		setResults(initialResults);
 		setAverages(initialAverages);
 		setErrors([]);
-		setOutlierMethod(null); // Reset outlier
+		setOutlierMethod(null);
 	};
 
 	// Memoize input groups to prevent re-rendering when other state changes

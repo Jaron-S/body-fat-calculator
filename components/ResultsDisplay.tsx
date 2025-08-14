@@ -82,14 +82,13 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
 								value={results.adjusted}
 								isPrimary
 							/>
+							<ResultCard title="RFM" value={results.rfm} />
 							<ResultCard title="Navy BFP" value={results.navy} />
-							<ResultCard title="Military BFP" value={results.military} />
 							<ResultCard
 								title="Jackson/Pollock"
 								value={results.jacksonPollock}
 							/>
 						</div>
-						{/* NEW: Display a note if an outlier was discarded */}
 						{outlierMethod && (
 							<Alert variant="default" className="mt-4">
 								<Info className="h-4 w-4" />
