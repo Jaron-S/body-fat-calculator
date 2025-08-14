@@ -94,9 +94,11 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
 							<Alert variant="default" className="mt-4">
 								<Info className="h-4 w-4" />
 								<AlertDescription className="text-xs">
-									Note: The <strong>{outlierMethod}</strong> result was
-									identified as an outlier and excluded from the 'Adjusted BFP'
-									calculation to improve accuracy.
+									<p>
+										Note: The <strong>{outlierMethod}</strong> result was
+										identified as an outlier and excluded from the 'Adjusted
+										BFP' calculation to improve accuracy.
+									</p>
 								</AlertDescription>
 							</Alert>
 						)}
