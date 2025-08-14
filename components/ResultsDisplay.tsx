@@ -14,12 +14,14 @@ interface ResultsDisplayProps {
 	results: BFPResults;
 	averages: MeasurementAverages;
 	errors: string[];
+	outlierMethod: string | null; // NEW: Prop to receive the outlier method name
 }
 
 const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
 	results,
 	averages,
 	errors,
+	outlierMethod,
 }) => {
 	const hasResults = Object.values(results).some((r) => r !== null);
 	if (!hasResults && errors.length === 0) return null;
@@ -87,9 +89,20 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
 								value={results.jacksonPollock}
 							/>
 						</div>
+						{/* NEW: Display a note if an outlier was discarded */}
+						{outlierMethod && (
+							<Alert variant="default" className="mt-4">
+								<Info className="h-4 w-4" />
+								<AlertDescription className="text-xs">
+									Note: The <strong>{outlierMethod}</strong> result was
+									identified as an outlier and excluded from the 'Adjusted BFP'
+									calculation to improve accuracy.
+								</AlertDescription>
+							</Alert>
+						)}
 						{(results.ffmi !== null || results.adjustedFfmi !== null) && (
 							<>
-								<Separator />
+								<Separator className="my-6" />
 								<div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
 									<ResultCard
 										title="Adjusted FFMI"
@@ -113,7 +126,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
 					</>
 				)}
 
-				{hasResults && hasAverages && <Separator />}
+				{hasResults && hasAverages && <Separator className="my-6" />}
 
 				{hasAverages && (
 					<div>

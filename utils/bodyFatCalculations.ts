@@ -131,43 +131,43 @@ export const calculateJacksonPollockBFP = (
 };
 
 /**
- * Calculates an adjusted BFP by removing outliers.
- * If 3 results are available, it finds the two closest values and averages them.
- * This prevents a single skewed measurement from affecting the final average.
+ * Calculates an adjusted BFP by removing outliers and returns which method was discarded.
  * @param results - The results from the other calculation methods.
- * @returns The adjusted average BFP, or null if inputs are missing.
+ * @returns An object with the adjusted BFP and the name of the outlier method, if any.
  */
 export const calculateAdjustedBFP = (
 	results: PartialBFPResults
-): number | null => {
+): { adjustedBfp: number | null; outlier: string | null } => {
 	const { military, navy, jacksonPollock } = results;
-	const validResults = [military, navy, jacksonPollock].filter(
-		(r) => r !== null && r > 0
-	) as number[];
+	const namedResults = [
+		{ name: "Military", value: military },
+		{ name: "Navy", value: navy },
+		{ name: "Jackson/Pollock", value: jacksonPollock },
+	].filter((r) => r.value !== null && r.value > 0) as {
+		name: string;
+		value: number;
+	}[];
+
+	if (namedResults.length === 0) return { adjustedBfp: null, outlier: null };
 
 	// If there are less than 3 results, outlier detection isn't possible, so we just average them.
-	if (validResults.length < 3) {
-		if (validResults.length === 0) return null;
-		const sum = validResults.reduce((acc, val) => acc + val, 0);
-		return sum / validResults.length;
+	if (namedResults.length < 3) {
+		const sum = namedResults.reduce((acc, res) => acc + res.value, 0);
+		return { adjustedBfp: sum / namedResults.length, outlier: null };
 	}
 
 	// With exactly 3 results, find the two that are closest together and average them.
-	// This effectively discards the single most significant outlier.
-	const [v1, v2, v3] = validResults;
-	const diff12 = Math.abs(v1 - v2);
-	const diff13 = Math.abs(v1 - v3);
-	const diff23 = Math.abs(v2 - v3);
+	const [r1, r2, r3] = namedResults;
+	const diff12 = Math.abs(r1.value - r2.value);
+	const diff13 = Math.abs(r1.value - r3.value);
+	const diff23 = Math.abs(r2.value - r3.value);
 
 	if (diff12 <= diff13 && diff12 <= diff23) {
-		// v1 and v2 are the closest
-		return (v1 + v2) / 2;
+		return { adjustedBfp: (r1.value + r2.value) / 2, outlier: r3.name };
 	} else if (diff13 <= diff12 && diff13 <= diff23) {
-		// v1 and v3 are the closest
-		return (v1 + v3) / 2;
+		return { adjustedBfp: (r1.value + r3.value) / 2, outlier: r2.name };
 	} else {
-		// v2 and v3 are the closest
-		return (v2 + v3) / 2;
+		return { adjustedBfp: (r2.value + r3.value) / 2, outlier: r1.name };
 	}
 };
 

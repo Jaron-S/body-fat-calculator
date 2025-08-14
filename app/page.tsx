@@ -79,6 +79,7 @@ export default function BodyFatCalculator() {
 	const [averages, setAverages] =
 		useState<MeasurementAverages>(initialAverages);
 	const [errors, setErrors] = useState<string[]>([]);
+	const [outlierMethod, setOutlierMethod] = useState<string | null>(null); // NEW: State for outlier method
 
 	// Load state from local storage on initial render
 	useEffect(() => {
@@ -91,6 +92,8 @@ export default function BodyFatCalculator() {
 				if (parsedData.results) setResults(parsedData.results);
 				if (parsedData.averages) setAverages(parsedData.averages);
 				if (parsedData.gender) setGender(parsedData.gender);
+				if (parsedData.outlierMethod)
+					setOutlierMethod(parsedData.outlierMethod); // Load outlier
 			}
 		} catch (error) {
 			console.error("Failed to load data from local storage:", error);
@@ -105,12 +108,13 @@ export default function BodyFatCalculator() {
 				measurements,
 				results,
 				averages,
+				outlierMethod, // Save outlier
 			};
 			localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(dataToSave));
 		} catch (error) {
 			console.error("Failed to save data to local storage:", error);
 		}
-	}, [gender, measurements, results, averages]);
+	}, [gender, measurements, results, averages, outlierMethod]);
 
 	const updateMeasurement = useCallback(
 		(field: keyof MeasurementInputs, index: number, value: string) => {
@@ -172,14 +176,20 @@ export default function BodyFatCalculator() {
 			);
 		}
 
-		const adjusted = calculateAdjustedBFP({ military, navy, jacksonPollock });
+		// UPDATED: Capture both the adjusted BFP and the outlier method
+		const { adjustedBfp, outlier } = calculateAdjustedBFP({
+			military,
+			navy,
+			jacksonPollock,
+		});
+		setOutlierMethod(outlier);
 
 		const { ffmi, adjustedFfmi } = calculateFFMI(
-			adjusted,
+			adjustedBfp,
 			calculatedAverages.weight,
 			calculatedAverages.height
 		);
-		if (adjusted !== null && ffmi === null) {
+		if (adjustedBfp !== null && ffmi === null) {
 			newErrors.push(
 				"Could not calculate FFMI. Check required fields: Weight, Height, and all fields for at least one BFP method."
 			);
@@ -189,7 +199,7 @@ export default function BodyFatCalculator() {
 			military,
 			navy,
 			jacksonPollock,
-			adjusted,
+			adjusted: adjustedBfp,
 			ffmi,
 			adjustedFfmi,
 		};
@@ -209,6 +219,7 @@ export default function BodyFatCalculator() {
 		setResults(initialResults);
 		setAverages(initialAverages);
 		setErrors([]);
+		setOutlierMethod(null); // Reset outlier
 	};
 
 	// Memoize input groups to prevent re-rendering when other state changes
@@ -415,7 +426,12 @@ export default function BodyFatCalculator() {
 					</Button>
 				</div>
 
-				<ResultsDisplay results={results} averages={averages} errors={errors} />
+				<ResultsDisplay
+					results={results}
+					averages={averages}
+					errors={errors}
+					outlierMethod={outlierMethod}
+				/>
 			</div>
 		</div>
 	);
